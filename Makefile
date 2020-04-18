@@ -24,6 +24,9 @@ out.bin: out.elf
 out.elf: main.c libopencm3/lib/libopencm3_stm32f1.a
 	$(CC) $(STM32F1_CFLAGS) -o out.elf
 
+libopencm3/lib/libopencm3_stm32f1.a: 
+	make -C libopencm3
+
 flash: out.bin
 	st-flash write out.bin 0x08000000
 	@date > flash
