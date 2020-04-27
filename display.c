@@ -49,10 +49,17 @@ void display_init() {
         lcd_set_entry_mode(&lcd, RIGHT, false);
 }
 
+
+void write_char(char ch) {
+	if (ch == '\f') lcd_clear(&lcd);
+	else lcd_write_data(&lcd, ch);
+}
+
+
 void write_str(char *str) {
 	char c;
 	while ((c = *str) != '\0') {
-		lcd_write_data(&lcd, c);
+		write_char(c);
 		str++;
 	}
 }

@@ -21,9 +21,13 @@ int main()
 {
 	board_init();
 	display_init();
+
 	char str[12];
-	sprintf(str, "%i", 543879828);
-	write_str(str);
+	for(int i = 0; i < 100; i++) {
+		sprintf(str, "\f%i", i);
+		write_str(str);
+		delay_ms(500);
+	}
 
 	while(1) {
 		gpio_toggle(GPIOC, GPIO9);
