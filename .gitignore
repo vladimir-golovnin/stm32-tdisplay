@@ -2,3 +2,4 @@ out.bin
 out.elf
 flash
 *.swp
+*.o
