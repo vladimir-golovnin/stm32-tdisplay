@@ -1,5 +1,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/timer.h>
+
 #include "lcd1602.h"
 #include "display.h"
 #include <sys/stat.h>
@@ -16,8 +18,30 @@
 
 #define DISPLAY_CONTRAST_PORT GPIOB
 #define DISPLAY_CONTRAST_PIN GPIO8
+#define DISPLAY_CONTRAST_TIMER TIM16
 
 lcd_handler_t lcd;
+
+void _init_contrast_ctrl() {
+        gpio_set_mode(DISPLAY_CONTRAST_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, DISPLAY_CONTRAST_PIN);
+	rcc_periph_clock_enable(RCC_TIM16);
+	rcc_periph_clock_enable(RCC_AFIO);
+
+	timer_set_oc_mode(DISPLAY_CONTRAST_TIMER, TIM_OC1, TIM_OCM_PWM1);
+	timer_set_prescaler(DISPLAY_CONTRAST_TIMER, 0); // 8 MHz / prescaler value
+	timer_enable_oc_preload(DISPLAY_CONTRAST_TIMER, TIM_OC1);
+	timer_direction_up(DISPLAY_CONTRAST_TIMER);
+
+	timer_set_period(DISPLAY_CONTRAST_TIMER, 999);	
+	timer_set_oc_value(DISPLAY_CONTRAST_TIMER, TIM_OC1, 0);
+	timer_generate_event(DISPLAY_CONTRAST_TIMER, TIM_EGR_UG);
+
+	timer_enable_break_main_output(DISPLAY_CONTRAST_TIMER);
+	timer_enable_oc_output(DISPLAY_CONTRAST_TIMER, TIM_OC1);
+
+	timer_enable_counter(DISPLAY_CONTRAST_TIMER); // must be executed after all
+}
+
 
 void display_init() {
         rcc_periph_clock_enable(LCD_RCC_PERIPH_ID);
@@ -29,8 +53,7 @@ void display_init() {
         gpio_set_mode(LCD_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LCD_DB6_PIN);
         gpio_set_mode(LCD_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LCD_DB7_PIN);
 
-        gpio_set_mode(DISPLAY_CONTRAST_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, DISPLAY_CONTRAST_PIN);
-        gpio_clear(DISPLAY_CONTRAST_PORT, DISPLAY_CONTRAST_PIN);
+	_init_contrast_ctrl();
 
         lcd_cfg_t lcd_cfg;
         lcd_cfg.e.port = lcd_cfg.rs.port = lcd_cfg.db4.port = lcd_cfg.db5.port = lcd_cfg.db6.port = lcd_cfg.db7.port = LCD_PORT;
@@ -64,3 +87,12 @@ void write_str(char *str) {
 	}
 }
 
+#define cmp_step 3
+#define cmp_max 300
+
+
+void set_contrast(uint8_t value) {
+	uint8_t contrast_perc = value > 100 ? 100 : value;
+	int cmp = cmp_max - (cmp_step * contrast_perc);
+	timer_set_oc_value(DISPLAY_CONTRAST_TIMER, TIM_OC1, cmp);
+}

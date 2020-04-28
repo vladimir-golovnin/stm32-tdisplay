@@ -23,9 +23,10 @@ int main()
 	display_init();
 
 	char str[12];
-	for(int i = 0; i < 100; i++) {
+	for(int i = 60; i < 100; i += 1) {
 		sprintf(str, "\f%i", i);
 		write_str(str);
+		set_contrast(i);
 		delay_ms(500);
 	}
 
